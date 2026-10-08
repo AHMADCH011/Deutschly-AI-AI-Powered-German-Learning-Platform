@@ -530,6 +530,10 @@ elif st.session_state.page == "Chapter":
 # QUIZ
 # ============================================================
 
+# ============================================================
+# QUIZ
+# ============================================================
+
 elif st.session_state.page == "Quiz":
 
     chapter_id = st.session_state.selected_chapter
@@ -543,9 +547,16 @@ elif st.session_state.page == "Quiz":
         None
     )
 
+    # --------------------------------------------------------
+    # Chapter validation
+    # --------------------------------------------------------
+
     if not chapter:
 
         st.error("Chapter not found.")
+
+        if st.button("← Back"):
+            go_to("Learning Path")
 
     else:
 
@@ -553,15 +564,43 @@ elif st.session_state.page == "Quiz":
             f"📝 Quiz: {chapter['title']}"
         )
 
+        st.caption(
+            f"Level: {chapter['level']}"
+        )
+
+        st.write(
+            "Choose the correct answer for each question."
+        )
+
+        st.info(
+            "💡 You need at least 70% to pass this quiz."
+        )
+
+        # ----------------------------------------------------
+        # Get quiz
+        # ----------------------------------------------------
+
         quiz = get_quiz(chapter_id)
 
         if not quiz:
 
-            st.warning("Quiz is not available yet.")
+            st.warning(
+                "Quiz is not available yet."
+            )
 
         else:
 
+            # ------------------------------------------------
+            # Store student answers
+            # ------------------------------------------------
+
             answers = {}
+
+            # ------------------------------------------------
+            # Display questions
+            # IMPORTANT:
+            # We DO NOT display question["answer"]
+            # ------------------------------------------------
 
             for index, question in enumerate(quiz):
 
@@ -575,17 +614,36 @@ elif st.session_state.page == "Quiz":
                     key=f"q_{chapter_id}_{index}"
                 )
 
+                st.divider()
+
+            # ------------------------------------------------
+            # Submit quiz
+            # ------------------------------------------------
+
             if st.button(
-                "Submit Quiz",
-                type="primary"
+                "✅ Submit Quiz",
+                type="primary",
+                use_container_width=True
             ):
 
                 correct = 0
 
+                # --------------------------------------------
+                # Check answers internally
+                # --------------------------------------------
+
                 for index, question in enumerate(quiz):
 
-                    if answers[index] == question["answer"]:
+                    selected_answer = answers.get(index)
+
+                    correct_answer = question["answer"]
+
+                    if selected_answer == correct_answer:
                         correct += 1
+
+                # --------------------------------------------
+                # Calculate score
+                # --------------------------------------------
 
                 score = int(
                     (correct / len(quiz)) * 100
@@ -595,6 +653,10 @@ elif st.session_state.page == "Quiz":
 
                 xp = score * 10 if passed else 0
 
+                # --------------------------------------------
+                # Save result
+                # --------------------------------------------
+
                 save_quiz_result(
                     chapter_id,
                     chapter["title"],
@@ -603,12 +665,25 @@ elif st.session_state.page == "Quiz":
                     passed
                 )
 
+                # --------------------------------------------
+                # Store result in session
+                # --------------------------------------------
+
+                st.session_state.quiz_submitted = True
+                st.session_state.quiz_score = score
+                st.session_state.quiz_correct = correct
+                st.session_state.quiz_total = len(quiz)
+
+                # --------------------------------------------
+                # Display result
+                # --------------------------------------------
+
                 st.divider()
 
                 if passed:
 
                     st.success(
-                        f"🎉 Passed! Your score is {score}%"
+                        f"🎉 Congratulations! You passed with {score}%."
                     )
 
                     st.balloons()
@@ -617,25 +692,61 @@ elif st.session_state.page == "Quiz":
                         f"⭐ You earned {xp} XP!"
                     )
 
+                    st.write(
+                        f"Correct answers: "
+                        f"**{correct}/{len(quiz)}**"
+                    )
+
                     if chapter_id < len(CHAPTERS):
 
-                        st.write(
-                            "🔓 The next chapter is now unlocked."
+                        st.success(
+                            "🔓 The next chapter is now unlocked!"
                         )
 
-                    if st.button("Continue Learning"):
+                    else:
+
+                        st.success(
+                            "🏆 You completed all available chapters!"
+                        )
+
+                    if st.button(
+                        "📚 Continue Learning",
+                        use_container_width=True
+                    ):
 
                         go_to("Learning Path")
 
                 else:
 
                     st.error(
-                        f"You scored {score}%. You need at least 70% to pass."
+                        f"You scored {score}%."
                     )
 
                     st.warning(
-                        "📚 Review the chapter and try again."
+                        "You need at least 70% to pass."
                     )
+
+                    st.write(
+                        f"Correct answers: "
+                        f"**{correct}/{len(quiz)}**"
+                    )
+
+                    st.info(
+                        "📖 Review the chapter and try the quiz again."
+                    )
+
+                    if st.button(
+                        "🔄 Review Chapter",
+                        use_container_width=True
+                    ):
+
+                        go_to("Chapter")
+
+               
+
+             
+
+                 
 
 
 # ============================================================
