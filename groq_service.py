@@ -3,36 +3,21 @@ import json
 import re
 
 import streamlit as st
-from groq import Groq
+from openai import OpenAI
+
+
+MODEL = "openrouter/free"
 
 
 def get_api_key():
 
     try:
-
-        if "GROQ_API_KEY" in st.secrets:
-            return st.secrets["GROQ_API_KEY"]
-
+        if "OPENROUTER_API_KEY" in st.secrets:
+            return st.secrets["OPENROUTER_API_KEY"]
     except Exception:
         pass
 
-    return os.getenv("GROQ_API_KEY")
-
-
-def get_model():
-
-    try:
-
-        if "GROQ_MODEL" in st.secrets:
-            return st.secrets["GROQ_MODEL"]
-
-    except Exception:
-        pass
-
-    return os.getenv(
-        "GROQ_MODEL",
-        "llama-3.1-8b-instant"
-    )
+    return os.getenv("OPENROUTER_API_KEY")
 
 
 def get_client():
@@ -40,22 +25,24 @@ def get_client():
     api_key = get_api_key()
 
     if not api_key:
-
         raise ValueError(
-            "GROQ_API_KEY is missing. "
+            "OPENROUTER_API_KEY is missing. "
             "Add it to Streamlit Secrets."
         )
 
-    return Groq(api_key=api_key)
+    return OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key
+    )
 
 
-def ask_groq(system_prompt, user_prompt):
+def ask_openrouter(system_prompt, user_prompt):
 
     client = get_client()
 
     response = client.chat.completions.create(
 
-        model=get_model(),
+        model=MODEL,
 
         messages=[
             {
@@ -79,14 +66,12 @@ def ask_groq(system_prompt, user_prompt):
 def translate_with_ai(text):
 
     system_prompt = """
-You are Deutschly AI, a German teacher designed especially
-for Pakistani students.
+You are Deutschly AI, a German teacher designed
+especially for Pakistani students.
 
 The student may write English, Urdu, or Roman Urdu.
 
 Translate the sentence into natural German.
-
-Also explain the German in simple English and Roman Urdu.
 
 Return ONLY valid JSON.
 
@@ -107,12 +92,11 @@ Use exactly this structure:
 }
 """
 
-    result = ask_groq(
+    result = ask_openrouter(
         system_prompt,
         text
     )
 
-    # Remove markdown code fences
     result = re.sub(
         r"```json|```",
         "",
@@ -126,7 +110,7 @@ Use exactly this structure:
     except json.JSONDecodeError:
 
         raise ValueError(
-            "AI returned an invalid response. "
+            "The AI returned an invalid JSON response. "
             "Please try again."
         )
 
@@ -134,7 +118,7 @@ Use exactly this structure:
 def ask_tutor(question):
 
     system_prompt = """
-You are Deutschly AI Tutor.
+You are Deutschly AI German Tutor.
 
 You teach German to Pakistani students.
 
@@ -154,7 +138,7 @@ When explaining German:
 Be friendly, encouraging and concise.
 """
 
-    return ask_groq(
+    return ask_openrouter(
         system_prompt,
         question
     )
